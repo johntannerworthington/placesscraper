@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>cold.email query creator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #2a2a2a;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    p {
+      text-align: center;
+      font-size: 1.1em;
+      margin-bottom: 30px;
+    }
+    .upload-box {
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      padding: 20px;
+      background: #fff;
+      text-align: center;
+      margin: 20px auto;
+      width: 400px;
+    }
+    input[type="file"], input[type="password"] {
+      display: block;
+      margin: 10px auto;
+    }
+    .button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    .examples {
+      text-align: center;
+      margin-top: 20px;
+    }
+    a {
+      color: #007BFF;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>cold.email query creator</h1>
+  <p>Upload your list of cities/states and base queries, and we'll generate a combined search-ready CSV file.</p>
+
+  <form action="/combine" method="post" enctype="multipart/form-data">
+    <div class="upload-box">
+      <label><strong>Upload your <code>cities.csv</code></strong></label>
+      <input type="file" name="cities" required>
+    </div>
+
+    <div class="upload-box">
+      <label><strong>Upload your <code>queries.csv</code></strong></label>
+      <input type="file" name="queries" required>
+    </div>
+
+    <div style="text-align: center;">
+      <button type="submit" class="button">Generate Combined CSV</button>
+    </div>
+  </form>
+
+  <div class="examples">
+    <p>Need example files?</p>
+    <a href="/static/example-cities.csv" download>Download example cities.csv</a> |
+    <a href="/static/example-queries.csv" download>Download example queries.csv</a>
+  </div>
+
+  <hr><br>
+
+  <h2>Run Serper Queries</h2>
+  <p>Upload a <code>combined_queries.csv</code> and your Serper API Key</p>
+
+  <form action="/serper" method="post" enctype="multipart/form-data">
+    <div class="upload-box">
+      <label><strong>Upload your <code>queries</code> CSV</strong></label>
+      <input type="file" name="queries" required>
+    </div>
+
+    <div class="upload-box">
+      <label><strong>Enter your <code>Serper.dev API Key</code></strong></label>
+      <input type="password" name="serper_api_key" required>
+    </div>
+
+    <div style="text-align: center;">
+      <button type="submit" class="button">Run Serper Scraper</button>
+    </div>
+  </form>
+
+</body>
+</html>
