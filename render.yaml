@@ -5,7 +5,7 @@ services:
     plan: pro-ultra    # << this is the ~$25/month plan
     branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --timeout 300
     envVars:
       - key: PYTHON_VERSION
         value: 3.10
