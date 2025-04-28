@@ -14,6 +14,7 @@ OUTPUT_PATH = 'uploads/output.csv'
 
 # === Globals ===
 api_call_count = 0
+seen_cids = set()
 
 # === Create Session with Retry ===
 def create_session(api_key):
@@ -79,7 +80,7 @@ def fetch_places(session, row):
                 "search_term": search_term,
                 "page": page,
             }
-            # Normalize place fields as well
+            # Normalize place fields
             for key, value in place.items():
                 entry[key] = normalize_text(value)
 
@@ -107,61 +108,46 @@ def is_valid(entry):
 
 # === Main Runner ===
 def run_serper(queries_path, api_key):
-    global api_call_count
+    global api_call_count, seen_cids
     session = create_session(api_key)
     queries = load_queries(queries_path)
 
     print(f"🚀 Starting scrape of {len(queries)} queries with up to {MAX_WORKERS} workers...")
 
-    all_results = []
     all_keys = set(["query", "city", "zip", "search_term", "page", "cid", "is_valid", "maps_url"])
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(fetch_places, session, row): row for row in queries}
-        for i, future in enumerate(concurrent.futures.as_completed(futures), 1):
-            places = future.result()
-            for place in places:
-                place["is_valid"] = "TRUE" if is_valid(place) else "FALSE"
-                all_results.append(place)
-                all_keys.update(place.keys())
+    with open(OUTPUT_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = None
 
-            if i % 100 == 0 or i == len(queries):
-                print(f"✅ Completed {i}/{len(queries)} queries. Total results: {len(all_results)}")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {executor.submit(fetch_places, session, row): row for row in queries}
+            for i, future in enumerate(concurrent.futures.as_completed(futures), 1):
+                places = future.result()
+                rows_to_write = []
+                for place in places:
+                    cid = place.get("cid")
+                    if cid and cid not in seen_cids:
+                        seen_cids.add(cid)
+                        place["is_valid"] = "TRUE" if is_valid(place) else "FALSE"
+                        place["maps_url"] = f"https://www.google.com/maps?cid={cid}"
+                        place["cid"] = f"'{cid}"  # Excel safe CID
+                        all_keys.update(place.keys())
+                        rows_to_write.append(place)
 
-    print(f"\n🧹 Deduplicating {len(all_results)} rows by 'cid'...")
-    seen_cids = set()
-    deduped_results = []
-    for entry in all_results:
-        cid = entry.get("cid")
-        if cid and cid not in seen_cids:
-            seen_cids.add(cid)
-            deduped_results.append(entry)
+                if rows_to_write:
+                    if writer is None:
+                        headers = [
+                            "query", "city", "zip", "search_term", "page", "is_valid", "maps_url"
+                        ] + sorted(k for k in all_keys if k not in {"query", "city", "zip", "search_term", "page", "is_valid", "maps_url"})
+                        writer = csv.DictWriter(f, fieldnames=headers)
+                        writer.writeheader()
 
-    print(f"📦 Final deduplicated results: {len(deduped_results)}")
+                    writer.writerows(rows_to_write)
 
-    headers = ["query", "city", "zip", "search_term", "page", "is_valid", "maps_url"] + sorted(
-        key for key in all_keys if key not in {"query", "city", "zip", "search_term", "page", "is_valid", "maps_url"}
-    )
+                if i % 100 == 0 or i == len(queries):
+                    print(f"✅ Completed {i}/{len(queries)} queries. Current unique businesses: {len(seen_cids)}")
 
-    try:
-        with open(OUTPUT_PATH, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=headers)
-            writer.writeheader()
-
-            for entry in deduped_results:
-                cid = entry.get('cid')
-                if cid:
-                    # Add clean Google Maps URL
-                    entry["maps_url"] = f"https://www.google.com/maps?cid={cid}"
-                    # Protect CID in Excel
-                    entry["cid"] = f"'{cid}"
-
-                writer.writerow(entry)
-
-        print(f"\n✅ Done! Wrote {len(deduped_results)} rows to '{OUTPUT_PATH}'")
-        print(f"📊 Total API calls made to Serper: {api_call_count}")
-
-    except Exception as e:
-        print(f"❌ Error writing output file: {e}")
+    print(f"\n✅ Done! Wrote {len(seen_cids)} deduplicated rows to '{OUTPUT_PATH}'")
+    print(f"📊 Total API calls made to Serper: {api_call_count}")
 
     return OUTPUT_PATH
