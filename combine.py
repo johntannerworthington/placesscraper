@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
 """
-Updated generate_queries_csv.py
+Updated generate_queries_csv.py with session-safe output.
 
 Fixes city name normalization to improve ZIP code lookups.
-- Replaces common punctuations and special characters
-- Adds fuzzy matching fallback using city synonyms and known exceptions (if needed)
-
-This version improves matching for cities like:
-- St. Paul
-- St. Louis Park
-- Louisville/Jefferson County
-- Lexington-Fayette
-- San Buenaventura (Ventura)
+Supports per-session folder output for concurrent safety.
 """
 import csv
 import sys
 import re
+import os
+import uuid
 
 CITIES_CSV   = 'cities.csv'
 QUERIES_CSV  = 'queries.csv'
 USZIPS_CSV   = 'uszips.csv'
-OUTPUT_CSV   = 'combined_queries.csv'
+OUTPUT_DIR   = 'uploads'
 
+# === Helpers ===
 def normalize_city_name(name):
     name = name.strip().lower()
     name = re.sub(r'[^a-z0-9 ]', '', name)  # remove punctuation
@@ -87,7 +82,7 @@ def load_zipdata(path):
         print(f"Error: '{path}' must have columns: zip,city,state_id,state_name.")
         sys.exit(1)
 
-def main():
+def main(session_id=None):
     cities  = load_cities(CITIES_CSV)
     queries = load_queries(QUERIES_CSV)
     zipdata = load_zipdata(USZIPS_CSV)
@@ -100,8 +95,14 @@ def main():
         index.setdefault((city_norm, abbr), []).append(rec['zip'])
         index.setdefault((city_norm, full), []).append(rec['zip'])
 
+    if not session_id:
+        session_id = str(uuid.uuid4())
+    output_folder = os.path.join(OUTPUT_DIR, session_id)
+    os.makedirs(output_folder, exist_ok=True)
+    output_csv_path = os.path.join(output_folder, 'combined_queries.csv')
+
     count = 0
-    with open(OUTPUT_CSV, 'w', newline='', encoding='utf-8') as out:
+    with open(output_csv_path, 'w', newline='', encoding='utf-8') as out:
         writer = csv.writer(out)
         writer.writerow(['query','city','state','zip'])
 
@@ -110,7 +111,7 @@ def main():
                 city_key = normalize_city_name(city)
                 zips = index.get((city_key, state.upper())) or index.get((city_key, state.lower()))
                 if not zips:
-                    print(f"\u26a0\ufe0f  No ZIPs found for {city}, {state}")
+                    print(f"⚠️  No ZIPs found for {city}, {state}")
                     continue
                 for z in zips:
                     writer.writerow([query, city, state, z])
@@ -118,16 +119,15 @@ def main():
             if count and count % 100000 == 0:
                 print(f"  {count:,} rows generated...")
 
-    print(f"\u2705 Done! Wrote {count:,} lines to '{OUTPUT_CSV}'")
+    print(f"✅ Done! Wrote {count:,} lines to '{output_csv_path}'")
+    return output_csv_path
 
-if __name__ == '__main__':
-    main()
-
-
-def generate_combined_csv(cities_path, queries_path, uszips_path, output_path):
-    global CITIES_CSV, QUERIES_CSV, USZIPS_CSV, OUTPUT_CSV
+def generate_combined_csv(cities_path, queries_path, uszips_path, session_id=None):
+    global CITIES_CSV, QUERIES_CSV, USZIPS_CSV
     CITIES_CSV = cities_path
     QUERIES_CSV = queries_path
     USZIPS_CSV = uszips_path
-    OUTPUT_CSV = output_path
+    return main(session_id)
+
+if __name__ == '__main__':
     main()
