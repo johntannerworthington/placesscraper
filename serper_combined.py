@@ -5,7 +5,6 @@ import unicodedata
 import concurrent.futures
 import os
 import uuid
-import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -30,30 +29,21 @@ def create_session(api_key):
     session.mount("https://", HTTPAdapter(max_retries=retries))
     return session
 
-# === Normalize Text ===
+# === Normalize Text (remove accents) ===
 def normalize_text(text):
     if not isinstance(text, str):
         return text
     normalized = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
     return normalized.strip()
 
-# === Load Queries (support both single-column and full format) ===
+# === Load Queries ===
 def load_queries(filepath):
     try:
         with open(filepath, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames
-            if fieldnames is None:
-                raise ValueError("Input file is empty or invalid.")
-
-            if set(fieldnames) == {"query"}:
-                # Single column mode (auto-fill city and zip blank)
-                return [{"query": row["query"], "city": "", "zip": ""} for row in reader]
-            elif {"query", "city", "zip"}.issubset(fieldnames):
-                # Normal mode
-                return list(reader)
-            else:
-                raise ValueError(f"Input file must contain either just 'query' or 'query', 'city', and 'zip' columns")
+            if not {"query", "city", "zip"}.issubset(reader.fieldnames):
+                raise ValueError(f"Input file must contain 'query', 'city', and 'zip' columns")
+            return list(reader)
     except Exception as e:
         print(f"Error loading '{filepath}': {e}")
         exit(1)
@@ -66,7 +56,7 @@ def fetch_places(session, row):
     collected = []
 
     while True:
-        payload = {"q": search_term.strip(), "location": row.get("zip", "").strip()}
+        payload = {"q": search_term, "location": row.get("zip", "").strip()}
         if page > 1:
             payload["page"] = page
 
@@ -89,7 +79,7 @@ def fetch_places(session, row):
                 "query": normalize_text(row['query']),
                 "city": normalize_text(row['city']),
                 "zip": row.get('zip', '').strip(),
-                "search_term": search_term.strip(),
+                "search_term": search_term,
                 "page": page,
             }
             for key, value in place.items():
@@ -120,7 +110,7 @@ def is_valid(entry):
 def run_serper(queries_path, api_key):
     global api_call_count, seen_cids
 
-    # Reset globals
+    # Reset globals for clean session
     api_call_count = 0
     seen_cids = set()
 
@@ -139,7 +129,7 @@ def run_serper(queries_path, api_key):
     print(f"✅ Session ID created: {session_id}")
     print(f"✅ Manual file recovery if needed: https://placesscraper.onrender.com/download/{session_id}")
     print("⏳ Waiting 10 seconds to copy Session ID...")
-    time.sleep(10)
+    import time; time.sleep(10)
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = None
