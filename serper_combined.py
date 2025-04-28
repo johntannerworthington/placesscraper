@@ -65,7 +65,7 @@ def fetch_places(session, row):
             resp = session.post(ENDPOINT, json=payload, timeout=10)
             api_call_count += 1
             resp.raise_for_status()
-            data = json.loads(resp.text, parse_int=str, parse_float=str)  # Force CIDs as strings
+            data = json.loads(resp.text, parse_int=str, parse_float=str)
             places = data.get("places", [])
         except Exception as e:
             print(f"❌ Error on page {page}: {e}")
@@ -82,10 +82,8 @@ def fetch_places(session, row):
                 "search_term": search_term,
                 "page": page,
             }
-            # Normalize place fields
             for key, value in place.items():
                 entry[key] = normalize_text(value)
-
             collected.append(entry)
 
         print(f"→ Page {page} returned {len(places)} places")
@@ -111,6 +109,11 @@ def is_valid(entry):
 # === Main Runner ===
 def run_serper(queries_path, api_key):
     global api_call_count, seen_cids
+
+    # Reset globals for clean session
+    api_call_count = 0
+    seen_cids = set()
+
     session = create_session(api_key)
     queries = load_queries(queries_path)
 
@@ -122,6 +125,11 @@ def run_serper(queries_path, api_key):
     session_dir = os.path.join(UPLOADS_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
     output_path = os.path.join(session_dir, "output.csv")
+
+    print(f"✅ Session ID created: {session_id}")
+    print(f"✅ Manual file recovery if needed: https://placesscraper.onrender.com/download/{session_id}")
+    print("⏳ Waiting 10 seconds to copy Session ID...")
+    import time; time.sleep(10)
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = None
@@ -137,7 +145,7 @@ def run_serper(queries_path, api_key):
                         seen_cids.add(cid)
                         place["is_valid"] = "TRUE" if is_valid(place) else "FALSE"
                         place["maps_url"] = f"https://www.google.com/maps?cid={cid}"
-                        place["cid"] = f"'{cid}"  # Excel safe CID
+                        place["cid"] = f"'{cid}"
                         all_keys.update(place.keys())
                         rows_to_write.append(place)
 
