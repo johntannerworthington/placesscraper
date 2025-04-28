@@ -26,9 +26,10 @@ def combine():
     cities_file.save(cities_path)
     queries_file.save(queries_path)
 
-    generate_combined_csv(cities_path, queries_path, uszips_path, output_path)
+    output_path = generate_combined_csv(cities_path, queries_path, uszips_path)
 
     return send_file(output_path, as_attachment=True)
+
 
 @app.route('/serper', methods=['POST'])
 def serper():
