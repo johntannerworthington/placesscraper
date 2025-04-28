@@ -3,6 +3,8 @@ import json
 import requests
 import unicodedata
 import concurrent.futures
+import os
+import uuid
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -10,7 +12,7 @@ from urllib3.util.retry import Retry
 ENDPOINT = "https://google.serper.dev/places"
 MAX_WORKERS = 200
 MIN_REVIEWS = 10
-OUTPUT_PATH = 'uploads/output.csv'
+UPLOADS_DIR = 'uploads'
 
 # === Globals ===
 api_call_count = 0
@@ -116,7 +118,12 @@ def run_serper(queries_path, api_key):
 
     all_keys = set(["query", "city", "zip", "search_term", "page", "cid", "is_valid", "maps_url"])
 
-    with open(OUTPUT_PATH, "w", newline="", encoding="utf-8") as f:
+    session_id = str(uuid.uuid4())
+    session_dir = os.path.join(UPLOADS_DIR, session_id)
+    os.makedirs(session_dir, exist_ok=True)
+    output_path = os.path.join(session_dir, "output.csv")
+
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -147,7 +154,7 @@ def run_serper(queries_path, api_key):
                 if i % 100 == 0 or i == len(queries):
                     print(f"✅ Completed {i}/{len(queries)} queries. Current unique businesses: {len(seen_cids)}")
 
-    print(f"\n✅ Done! Wrote {len(seen_cids)} deduplicated rows to '{OUTPUT_PATH}'")
+    print(f"\n✅ Done! Wrote {len(seen_cids)} deduplicated rows to '{output_path}'")
     print(f"📊 Total API calls made to Serper: {api_call_count}")
 
-    return OUTPUT_PATH
+    return output_path
