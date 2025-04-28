@@ -2,7 +2,7 @@ services:
   - type: web
     name: cold-email-scraper
     env: python
-    plan: pro-ultra    # << this is the ~$25/month plan
+    plan: pro-ultra    # << this is the ~$450/month plan
     branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --timeout 60000
