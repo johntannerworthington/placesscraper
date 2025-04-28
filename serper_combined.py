@@ -61,7 +61,6 @@ def fetch_places(session, row):
         if page > 1:
             payload["page"] = page
 
-        print(f"Fetching '{search_term}', page {page}...")
         try:
             resp = session.post(ENDPOINT, json=payload, timeout=10)
             api_call_count += 1
@@ -69,7 +68,6 @@ def fetch_places(session, row):
             data = json.loads(resp.text, parse_int=str, parse_float=str)
             places = data.get("places", [])
         except Exception as e:
-            print(f"❌ Error on page {page}: {e}")
             break
 
         if not places:
@@ -88,7 +86,6 @@ def fetch_places(session, row):
 
             collected.append(entry)
 
-        print(f"→ Page {page} returned {len(places)} places")
         page += 1
 
     return collected
@@ -119,9 +116,8 @@ def run_serper(queries_path, api_key):
     os.makedirs(session_dir, exist_ok=True)
     output_path = os.path.join(session_dir, "output.csv")
 
-    # Print session ID immediately
     print(f"✅ Session ID created: {session_id}")
-    print(f"✅ If the job crashes, you can manually download your file here:")
+    print(f"✅ If the job crashes, manually download your file here:")
     print(f"    https://placesscraper.onrender.com/download/{session_id}")
     print("⏳ Waiting 10 seconds for you to copy the session ID...")
     time.sleep(10)
