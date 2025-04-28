@@ -139,7 +139,7 @@ def run_serper(queries_path, api_key):
                         headers = [
                             "query", "city", "zip", "search_term", "page", "is_valid", "maps_url"
                         ] + sorted(k for k in all_keys if k not in {"query", "city", "zip", "search_term", "page", "is_valid", "maps_url"})
-                        writer = csv.DictWriter(f, fieldnames=headers)
+                        writer = csv.DictWriter(f, fieldnames=headers, extrasaction='ignore')
                         writer.writeheader()
 
                     writer.writerows(rows_to_write)
