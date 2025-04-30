@@ -162,7 +162,7 @@ def run_serper(queries_path, api_key):
                 if i % 100 == 0 or i == len(queries):
                     print(f"✅ Completed {i}/{len(queries)} queries. Current unique businesses: {len(seen_cids)}")
 
-     print(f"\n✅ Done! Wrote {len(seen_cids)} deduplicated rows to '{output_path}'")
+    print(f"\n✅ Done! Wrote {len(seen_cids)} deduplicated rows to '{output_path}'")
     print(f"📊 Total API calls made to Serper: {api_call_count}")
 
     BASE_URL = "https://placesscraper.onrender.com"  # Change to http://localhost:5000 if running locally
