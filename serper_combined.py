@@ -12,13 +12,12 @@ from urllib3.util.retry import Retry
 ENDPOINT = "https://google.serper.dev/places"
 MAX_WORKERS = 200
 MIN_REVIEWS = 10
-UPLOADS_DIR = 'uploads'
+UPLOADS_DIR = '/uploads'  # ✅ Use persistent disk
 
 # === Globals ===
 api_call_count = 0
 seen_cids = set()
 
-# === Create Session with Retry ===
 def create_session(api_key):
     session = requests.Session()
     session.headers.update({
@@ -29,14 +28,12 @@ def create_session(api_key):
     session.mount("https://", HTTPAdapter(max_retries=retries))
     return session
 
-# === Normalize Text (remove accents) ===
 def normalize_text(text):
     if not isinstance(text, str):
         return text
     normalized = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
     return normalized.strip()
 
-# === Load Queries ===
 def load_queries(filepath):
     try:
         with open(filepath, newline="", encoding="utf-8") as f:
@@ -48,7 +45,6 @@ def load_queries(filepath):
         print(f"Error loading '{filepath}': {e}")
         exit(1)
 
-# === Fetch Places from Serper ===
 def fetch_places(session, row):
     global api_call_count
     search_term = f"{normalize_text(row['query'])} in {normalize_text(row['city'])} {row.get('zip', '').strip()}"
@@ -91,7 +87,6 @@ def fetch_places(session, row):
 
     return collected
 
-# === Clean Ratings ===
 def clean_rating_count(val):
     try:
         if isinstance(val, (int, float)):
@@ -100,17 +95,14 @@ def clean_rating_count(val):
     except Exception:
         return 0
 
-# === Validate Entry ===
 def is_valid(entry):
     website = entry.get("website", "").strip()
     rating = clean_rating_count(entry.get("ratingCount", 0))
     return bool(website) and rating >= MIN_REVIEWS
 
-# === Main Runner ===
 def run_serper(queries_path, api_key):
     global api_call_count, seen_cids
 
-    # Reset globals for clean session
     api_call_count = 0
     seen_cids = set()
 
@@ -165,11 +157,7 @@ def run_serper(queries_path, api_key):
     print(f"\n✅ Done! Wrote {len(seen_cids)} deduplicated rows to '{output_path}'")
     print(f"📊 Total API calls made to Serper: {api_call_count}")
 
-    BASE_URL = "https://placesscraper.onrender.com"  # Change to http://localhost:5000 if running locally
+    BASE_URL = "https://placesscraper.onrender.com"
     print(f"✅ Download your results here: {BASE_URL}/download/{session_id}")
-
-    # Optional: auto-open in browser
-    # import webbrowser
-    # webbrowser.open(f"{BASE_URL}/download/{session_id}")
 
     return output_path
