@@ -4,14 +4,12 @@ from combine import generate_combined_csv
 from serper_combined import run_serper
 
 app = Flask(__name__)
-UPLOADS_DIR = 'uploads'
-
+UPLOADS_DIR = '/uploads'  # ✅ Use persistent disk
 
 @app.route('/')
 def index():
     with open('index.html') as f:
         return render_template_string(f.read())
-
 
 @app.route('/combine', methods=['POST'])
 def combine():
@@ -22,7 +20,6 @@ def combine():
 
     cities_path = os.path.join(UPLOADS_DIR, 'cities.csv')
     queries_path = os.path.join(UPLOADS_DIR, 'queries.csv')
-    output_path = os.path.join(UPLOADS_DIR, 'combined_queries.csv')
     uszips_path = 'uszips.csv'
 
     cities_file.save(cities_path)
@@ -31,7 +28,6 @@ def combine():
     output_path = generate_combined_csv(cities_path, queries_path, uszips_path)
 
     return send_file(output_path, as_attachment=True)
-
 
 @app.route('/serper', methods=['POST'])
 def serper():
@@ -46,7 +42,6 @@ def serper():
 
     return send_file(output_path, as_attachment=True)
 
-
 @app.route('/download/<session_id>')
 def download_file(session_id):
     file_path = os.path.join(UPLOADS_DIR, session_id, 'output.csv')
@@ -54,7 +49,6 @@ def download_file(session_id):
         return send_file(file_path, as_attachment=True)
     else:
         return f"❌ File not found for session ID: {session_id}", 404
-
 
 if __name__ == '__main__':
     app.run(debug=True)
