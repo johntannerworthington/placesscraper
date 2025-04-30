@@ -120,8 +120,6 @@ def run_serper(queries_path, api_key):
 
     print(f"✅ Session ID created: {session_id}")
     print(f"✅ Manual file recovery if needed: https://placesscraper.onrender.com/download/{session_id}")
-    print("⏳ Waiting 10 seconds to copy Session ID...")
-    import time; time.sleep(10)
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = None
